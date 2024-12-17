@@ -156,6 +156,7 @@ class Beam(pg.sprite.Sprite):
     def __init__(self, bird: Bird, angle: float = 0):
         """
         ビーム画像Surfaceを生成する
+        取得したマウスカーソルの座標に向けて、こうかとんから飛んでいく
         引数 bird：ビームを放つこうかとん
         """
         super().__init__()
@@ -369,8 +370,21 @@ class Shield(pg.sprite.Sprite):
             self.kill()
 
 
+def mouse_setting():
+    """
+    マウスカーソルを不可視にする関数
+    """
+    pg.mouse.set_visible(False)
+    print(pg.mouse.get_cursor())
+    # pg.cursor.compile(strings, black='X', white='.', xor='o')
+    # pg.mouse.set_cursor()
+
+
 def main():
     pg.display.set_caption("真！こうかとん無双")
+
+    mouse_setting()  # カーソルの設定（可視不可視など）の関数
+
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     bg_img = pg.image.load(f"fig/pg_bg.jpg")
     score = Score()
