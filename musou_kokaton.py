@@ -160,8 +160,11 @@ class Beam(pg.sprite.Sprite):
         """
         super().__init__()
         self.vx, self.vy = bird.dire
-        angle += math.degrees(math.atan2(-self.vy, self.vx))
+        mousex, mousey = pg.mouse.get_pos()
+
+        angle = 90 + math.degrees(math.atan2(bird.rect.centerx - mousex, bird.rect.centery - mousey))  # atan2が三角関数より弧度法で算出, degreesで度数法に変換
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
+
         rad_angle = math.radians(angle)
         self.vx = math.cos(rad_angle)
         self.vy = -math.sin(rad_angle)
@@ -294,6 +297,8 @@ class Score:
     def update(self, screen: pg.Surface):
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
+
+
 class EMP:
     def __init__(self, enemies, bombs, screen):
         self.enemies = enemies
@@ -381,11 +386,18 @@ def main():
     emp = EMP(emys, bombs, screen)
     tmr = 0
     clock = pg.time.Clock()
+
+
     while True:
         key_lst = pg.key.get_pressed()
+        mouse_lst = pg.mouse.get_pressed()  # mouseの押下されたボタンのリスト
+
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return 0
+
+            if mouse_lst[0] == True:  # 右クリック相当があれば条件式に入る
+                beams.add(Beam(bird))
 
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
@@ -396,8 +408,6 @@ def main():
                 # print("AAA")
                 score.value -= 200  # scoreのうち200を消費
                 gra.add(Gravity())
-            if event.type == pg.KEYDOWN and event.key == pg.K_s:
-                shield.add(Shield(bird, life=400))
             if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:
                 bird.state = "hyper"
                 bird.hyper_life = 500
