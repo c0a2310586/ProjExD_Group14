@@ -45,8 +45,8 @@ class Bird(pg.sprite.Sprite):
     delta = {  # 押下キーと移動量の辞書
         pg.K_w: (0, -1),
         pg.K_s: (0, +1),
-        pg.K_d: (-1, 0),
-        pg.K_a: (+1, 0),
+        pg.K_a: (-1, 0),
+        pg.K_d: (+1, 0),
     }
 
     def __init__(self, num: int, xy: tuple[int, int]):
@@ -389,7 +389,7 @@ def main():
 
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
-            if event.type == pg.KEYDOWN and event.key == pg.K_s:
+            if event.type == pg.KEYDOWN and event.key == pg.K_q:
                 shield.add(Shield(bird, life=400))
                 score.value -= 50  # スコア消費
             if score.value >= 200 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score200以上で
