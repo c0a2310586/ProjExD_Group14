@@ -372,9 +372,9 @@ class Shield(pg.sprite.Sprite):
 
 def mouse_setting():
     """
-    マウスカーソルを不可視にする関数
+    マウスカーソルを可視または不可視にする関数
     """
-    pg.mouse.set_visible(False)
+    pg.mouse.set_visible(True)
     print(pg.mouse.get_cursor())
     # pg.cursor.compile(strings, black='X', white='.', xor='o')
     # pg.mouse.set_cursor()
@@ -410,31 +410,24 @@ def main():
             if event.type == pg.QUIT:
                 return 0
 
-            if mouse_lst[0] == True:  # 右クリック相当があれば条件式に入る
+            if mouse_lst[0] == True:  # 右クリックがあれば条件式に入る
                 beams.add(Beam(bird))
-
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beams.add(Beam(bird))
-            if event.type == pg.KEYDOWN and event.key == pg.K_q:
+            if event.type == pg.KEYDOWN and event.key == pg.K_q:  # Qキーでシールド
                 shield.add(Shield(bird, life=400))
                 score.value -= 50  # スコア消費
             if score.value >= 200 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score200以上で
                 # print("AAA")
                 score.value -= 200  # scoreのうち200を消費
                 gra.add(Gravity())
-            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:
+            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:  # Rshiftキーでシールド
                 bird.state = "hyper"
                 bird.hyper_life = 500
                 score.value -= 100  # スコア消費
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_SPACE:
-                    beams.add(Beam(bird))
-                if key_lst[pg.K_LALT] and event.key == pg.K_SPACE:
-                    neo_beam = NeoBeam(bird, 5)
-                    beams.add(*neo_beam.gen_beams())
-            if score.value >= 20 and key_lst[pg.K_e] and not emp.active:
-                if score.value >= 20:
-                    score.value -= 20
+            if key_lst[pg.K_LALT] and event.key == pg.K_SPACE:  # altキーで5ビーム
+                neo_beam = NeoBeam(bird, 5)
+                beams.add(*neo_beam.gen_beams())
+            if score.value >= 20 and key_lst[pg.K_e] and not emp.active:  # Eキーでemp
+                score.value -= 20
                 emp.activate()
             elif emp.active and key_lst[pg.K_e]:
                 emp.deactivate()
