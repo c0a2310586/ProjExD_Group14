@@ -36,6 +36,42 @@ def calc_orientation(org: pg.Rect, dst: pg.Rect) -> tuple[float, float]:
     x_diff, y_diff = dst.centerx-org.centerx, dst.centery-org.centery
     norm = math.sqrt(x_diff**2+y_diff**2)
     return x_diff/norm, y_diff/norm
+def show_instructions(screen):
+    font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 50)  # 日本語フォントを指定
+    instructions = [
+        "操作説明:",
+        "矢印キー: こうかとんを移動",
+        "スペースキー: ビーム発射",
+        "Shiftキー: 高速移動",
+        "RShift: 無敵モード (20スコア消費)",
+        "Sキー: 防御壁 (50スコア消費)",
+    ]
+    screen.fill((0, 0, 0))  # 背景を黒に塗りつぶす
+    for i, line in enumerate(instructions):
+        text = font.render(line, True, (255, 255, 255))  # 白色でテキストを描画
+        screen.blit(text, (50, 50 + i * 60))  # テキストを表示
+
+    # 「Sを押して戻る」のメッセージ
+    back_message = "Bキーを押して戻る"
+    back_text = font.render(back_message, True, (255, 0, 0))  # 赤色で描画
+    screen.blit(back_text, (50, 50 + len(instructions) * 60))  # 操作説明の下に表示
+
+    pg.display.update()  # 画面更新
+    while True:
+        for event in pg.event.get():
+            if event.type == pg.KEYDOWN and event.key == pg.K_b:
+                return  # Sキーで操作説明を終了し、ゲーム開始画面に戻る
+
+def check_game_clear(score: "Score", screen):
+    if score.value > 1100:
+        font = pg.font.Font(None, 80)
+        text = font.render("ゲームクリア！", True, (255, 255, 0))
+        rect = text.get_rect(center=(WIDTH//2, HEIGHT//2))
+        screen.blit(text, rect)
+        pg.display.update()
+        time.sleep(3)
+        return True
+    return False
 
 
 class Bird(pg.sprite.Sprite):
@@ -362,115 +398,331 @@ class Shield(pg.sprite.Sprite):
         self.life -= 1
         if self.life < 0:
             self.kill()
+class StartScreen:
+    """
+    ゲーム開始画面を管理するクラス
+    """
+    def __init__(self, screen):
+        self.screen = screen
+        self.font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80)  # 日本語フォント
+        self.text = self.font.render("Sキーを押してゲーム開始！", True, (255, 0, 0))
+        self.rect = self.text.get_rect(center=(WIDTH//2, HEIGHT//2))
+        
+        # タイトル表示
+        self.title_font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 100)  # タイトルのフォント
+        self.title_text = self.title_font.render("真！真！無双こうかとん", True, (255, 255, 0))  # タイトル
+        self.title_rect = self.title_text.get_rect(center=(WIDTH//2, HEIGHT//4))
+
+        self.instructions = self.font.render("操作説明を見る: Iキー", True, (0, 255, 0))
+        self.instructions_rect = self.instructions.get_rect(center=(WIDTH//2, HEIGHT//2 + 100))
+
+        self.exit_text = self.font.render("Xキーを押したら終了", True, (128, 0, 128))  # 紫文字
+        self.exit_rect = self.exit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 200))
 
 
-def main():
-    pg.display.set_caption("真！こうかとん無双")
-    screen = pg.display.set_mode((WIDTH, HEIGHT))
-    bg_img = pg.image.load(f"fig/pg_bg.jpg")
-    score = Score()
+        self.bg_img = pg.image.load("fig/6.png")  # スタート画面の背景画像
 
-    bird = Bird(3, (900, 400))
-    bombs = pg.sprite.Group()
-    beams = pg.sprite.Group()
-    exps = pg.sprite.Group()
-    emys = pg.sprite.Group()
-    shield = pg.sprite.Group()
-    gra = pg.sprite.Group()
+    def display(self):
+        self.screen.blit(self.bg_img, [0, 0])
+        self.screen.blit(self.title_text, self.title_rect)  # タイトルを画面に表示
+        self.screen.blit(self.text, self.rect)
+        self.screen.blit(self.instructions, self.instructions_rect)
+        self.screen.blit(self.exit_text, self.exit_rect)
+        pg.display.update()
+class StageManager:
+    """
+    ステージ進行を管理するクラス
+    """
+    def __init__(self, bird: Bird, score: Score):
+        self.stage = 1  # 現在のステージ
+        self.bird = bird
+        self.score = score
+        self.enemy_kill_count = 0  # 倒した敵の数
+        self.font = pg.font.Font(None, 50)
+        """右下に現在のステージ番号を表示"""
+        stage_font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 50)  # 日本語フォント
+        stage_text = stage_font.render(f"ステージ: {self.stage}", True, (255, 0, 0))  # 赤色で描画
+        stage_rect = stage_text.get_rect(bottomright=(WIDTH - 10, HEIGHT - 10))
+        
+    def check_stage_clear(self, screen):
+        """ステージ 1 のクリア条件を満たしたか確認"""
+        if self.stage == 1 and self.enemy_kill_count >= 15:
+            self.display_stage_clear(screen)
+            self.stage += 1
+            time.sleep(2)  # ステージ遷移時に静止
+            # ボス生成 (コメントアウトで準備)
+            # ボス生成処理をここに記述
+            return True
+        return False
 
-    emp = EMP(emys, bombs, screen)
-    tmr = 0
-    clock = pg.time.Clock()
+    def display_stage_clear(self, screen):
+        """ステージクリアメッセージを表示"""
+        font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80)  # 日本語フォント
+        text = font.render(f"ステージ {self.stage} クリア！", True, (0, 255, 0))
+        rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(text, rect)
+        pg.display.update()
+
+
+    def check_game_clear(self, screen):
+        """ゲームクリア条件 (ボスを倒したか) を確認"""
+        if self.stage == 2 and self.enemy_kill_count >= 16:  # ボスが倒されたら
+            self.display_game_clear(screen)
+            time.sleep(3)  # ゲームクリア後に静止
+            return True
+        return False
+
+    def display_game_clear(self, screen):
+        """ゲームクリアメッセージを表示"""
+        black_overlay = pg.Surface((WIDTH, HEIGHT))
+        black_overlay.set_alpha(128)  # 半透明設定
+        black_overlay.fill((0, 0, 0))  # 黒色
+        screen.blit(black_overlay, (0, 0))  # 背景を描画
+
+        font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80)  # 日本語フォント
+        text = font.render("ゲームクリア！", True, (255, 255, 0))
+        rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+
+        # 両端に喜んでいるこうかとん画像を配置
+        img_left = pg.image.load("fig/6.png")
+        img_right = pg.transform.flip(img_left, True, False)
+        left_rect = img_left.get_rect(midright=(rect.left - 20, HEIGHT // 2))
+        right_rect = img_right.get_rect(midleft=(rect.right + 20, HEIGHT // 2))
+
+        screen.blit(text, rect)
+        screen.blit(img_left, left_rect)
+        screen.blit(img_right, right_rect)
+        pg.display.update()
+    def gameover(self, screen: pg.Surface):
+        """
+        ゲームオーバー画面を表示し、赤背景とテキストを描画する。
+        """
+        # 半透明の赤背景
+        red_overlay = pg.Surface((WIDTH, HEIGHT))
+        red_overlay.set_alpha(128)  # 半透明設定
+        red_overlay.fill((255, 0, 0))  # 赤色
+        screen.blit(red_overlay, (0, 0))  # 背景描画
+        
+
+        # テキスト表示
+        font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80)  # 日本語フォント
+        text = font.render("ゲームオーバー！", True, (255, 255, 255))  # 白文字
+        rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        screen.blit(text, rect)
+
+        # 泣いているこうかとん画像を表示
+        img = pg.image.load("fig/8.png")  # 泣いているこうかとん
+        img_rect = img.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 150))
+        screen.blit(img, img_rect)
+        # Bキーの説明
+        sub_text = font.render("Bキーを押してタイトルへ", True, (255, 255, 255))
+        sub_rect = sub_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))  # 文字間隔を調整
+        screen.blit(sub_text, sub_rect)
+
+        pg.display.update()
+
+        while True:
+            for event in pg.event.get():
+                if event.type == pg.KEYDOWN and event.key == pg.K_b:  # Bキーでタイトル画面に戻る
+                    screen.fill((0, 0, 0))  # 画面をクリア
+                    return
+    def display_stage(self, screen):
+        """右上にステージ進行状況を表示"""
+        stage_font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 30)
+
+        # ステージ数の表示 (右下)
+        stage_text = stage_font.render(f"ステージ: {self.stage}", True, (255, 0, 0))
+        stage_rect = stage_text.get_rect(bottomright=(WIDTH - 20, HEIGHT - 20))
+        screen.blit(stage_text, stage_rect)
+
+        # 敵の残数表示 (右上)
+        if self.stage == 1:
+            # 敵機の画像を読み込む
+            enemy_image = pg.image.load("fig/alien1.png")
+            enemy_image = pg.transform.scale(enemy_image, (20, 20))
+
+            # テキストのレンダリング
+            remaining_text = stage_font.render(f"残り:", True, (255, 255, 255))
+            remaining_rect = remaining_text.get_rect(topright=(WIDTH - 100, 20))
+
+            # 画像の表示位置
+            enemy_rect = enemy_image.get_rect(topright=(remaining_rect.left - 10, 20))  # テキストの左側に少し隙間をあける
+
+            # 画像とテキストの描画
+            screen.blit(enemy_image, enemy_rect)
+            screen.blit(remaining_text, remaining_rect)
+
+            # 数字の描画
+            number_text = stage_font.render(f"{15 - self.enemy_kill_count}", True, (255, 255, 255))
+            number_rect = number_text.get_rect(topleft=(remaining_rect.right, 20))
+            screen.blit(number_text, number_rect)
+
+        else:  # ステージ2
+            # ボスの画像を読み込む
+            boss_image = pg.image.load("fig/alien2.png")
+            boss_image = pg.transform.scale(boss_image, (30, 30))
+            boss_text = stage_font.render("ボス", True, (255, 255, 255))
+            boss_rect = boss_text.get_rect(topright=(WIDTH - 100, 20))
+            screen.blit(boss_text, boss_rect)
+            screen.blit(boss_image, boss_rect.topright)
+
+            
+
+def wait_for_start(screen):
+    start_screen = StartScreen(screen)
     while True:
-        key_lst = pg.key.get_pressed()
+        start_screen.display()  # タイトル画面を表示
         for event in pg.event.get():
             if event.type == pg.QUIT:
-                return 0
-
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beams.add(Beam(bird))
-            if event.type == pg.KEYDOWN and event.key == pg.K_s:
-                shield.add(Shield(bird, life=400))
-                score.value -= 50  # スコア消費
-            if score.value >= 200 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score200以上で
-                # print("AAA")
-                score.value -= 200  # scoreのうち200を消費
-                gra.add(Gravity())
-            if event.type == pg.KEYDOWN and event.key == pg.K_s:
-                shield.add(Shield(bird, life=400))
-            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:
-                bird.state = "hyper"
-                bird.hyper_life = 500
-                score.value -= 100  # スコア消費
+                return False
             if event.type == pg.KEYDOWN:
-                if event.key == pg.K_SPACE:
+                if event.key == pg.K_s:  # Sキーでゲーム開始
+                    return True
+                if event.key == pg.K_i:  # Iキーで操作説明画面に切り替え
+                    screen.fill((0, 0, 0))  # 画面を黒で塗りつぶす
+                    show_instructions(screen)  # 操作説明を表示
+                    screen.fill((0, 0, 0))  # 操作説明後に画面を再度黒で塗りつぶし
+                    start_screen.display()  # タイトル画面を再表示
+                if event.key == pg.K_x:  # Xキーでゲーム終了
+                    pg.quit()
+                    sys.exit()
+def main():
+    while True:
+        pg.display.set_caption("真！真！こうかとん無双")
+        screen = pg.display.set_mode((WIDTH, HEIGHT))
+        bg_img = pg.image.load(f"fig/pg_bg.jpg")
+        score = Score()
+        if not wait_for_start(screen):  # ユーザーがゲームを開始しない場合終了
+            return
+        bird = Bird(3, (900, 400))
+        bombs = pg.sprite.Group()
+        beams = pg.sprite.Group()
+        exps = pg.sprite.Group()
+        emys = pg.sprite.Group()
+        shield = pg.sprite.Group()
+        gra = pg.sprite.Group()
+
+        emp = EMP(emys, bombs, screen)
+        stage_manager = StageManager(bird, score)
+        tmr = 0
+        clock = pg.time.Clock()
+        while True:
+            key_lst = pg.key.get_pressed()
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    return 0
+
+                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                     beams.add(Beam(bird))
-                if key_lst[pg.K_LALT] and event.key == pg.K_SPACE:
-                    neo_beam = NeoBeam(bird, 5)
-                    beams.add(*neo_beam.gen_beams())
-            if score.value >= 20 and key_lst[pg.K_e] and not emp.active:
-                if score.value >= 20:
-                    score.value -= 20
-                emp.activate()
-            elif emp.active and key_lst[pg.K_e]:
-                emp.deactivate()
+                if event.type == pg.KEYDOWN and event.key == pg.K_s:
+                    shield.add(Shield(bird, life=400))
+                    score.value -= 50  # スコア消費
+                if score.value >= 200 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score200以上で
+                    # print("AAA")
+                    score.value -= 200  # scoreのうち200を消費
+                    gra.add(Gravity())
+                if event.type == pg.KEYDOWN and event.key == pg.K_s:
+                    shield.add(Shield(bird, life=400))
+                if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:
+                    bird.state = "hyper"
+                    bird.hyper_life = 500
+                    score.value -= 100  # スコア消費
+                if event.type == pg.KEYDOWN:
+                    if event.key == pg.K_SPACE:
+                        beams.add(Beam(bird))
+                    if key_lst[pg.K_LALT] and event.key == pg.K_SPACE:
+                        neo_beam = NeoBeam(bird, 5)
+                        beams.add(*neo_beam.gen_beams())
+                if score.value >= 20 and key_lst[pg.K_e] and not emp.active:
+                    if score.value >= 20:
+                        score.value -= 20
+                    emp.activate()
+                elif emp.active and key_lst[pg.K_e]:
+                    emp.deactivate()
 
 
-        screen.blit(bg_img, [0, 0])
+            screen.blit(bg_img, [0, 0])
 
-        if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
-            emys.add(Enemy())
+            if stage_manager.stage == 1 and tmr % 200 == 0:
+                emys.add(Enemy())
 
-        for emy in emys:
-            if emy.state == "stop" and tmr%emy.interval == 0:
-                # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
-                bombs.add(Bomb(emy, bird))
+            # ボス (仮で雑魚敵) の生成: ステージ 2
+            if stage_manager.stage == 2 and len(emys) == 0:  # ボス未生成の場合
+                emys.add(Enemy())  # ボス敵を出現 (本来のボス処理は後で追加)
 
-        for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():  # ビームと衝突した敵機リスト
-            exps.add(Explosion(emy, 100))  # 爆発エフェクト
-            score.value += 10  # 10点アップ
-            bird.change_img(6, screen)  # こうかとん喜びエフェクト
+            for emy in emys:
+                if emy.state == "stop" and tmr%emy.interval == 0:
+                    # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
+                    bombs.add(Bomb(emy, bird))
 
-        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
-            exps.add(Explosion(bomb, 50))  # 爆発エフェクト
-            score.value += 1  # 1点アップ
+            for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():  # ビームと衝突した敵機リスト
+                exps.add(Explosion(emy, 100))  # 爆発エフェクト
+                score.value += 10  # 10点アップ
+                bird.change_img(6, screen)# こうかとん喜びエフェクト
+                stage_manager.enemy_kill_count += 1 
 
-        for bomb in pg.sprite.groupcollide(bombs, shield, True, True).keys():  # 防御壁と衝突した爆弾リスト
-            exps.add(Explosion(bomb, 50))  # 爆発エフェクト
-
-        for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
-            if bird.state == "hyper":  # state="hyper"なら
+            for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
                 exps.add(Explosion(bomb, 50))  # 爆発エフェクト
                 score.value += 1  # 1点アップ
-            else:
-                bird.change_img(8, screen)  # こうかとん悲しみエフェクト
-                score.update(screen)
-                pg.display.update()
-                time.sleep(2)
-                return
-        for emy in pg.sprite.groupcollide(emys, gra, True, False).keys():  # 重力と衝突した敵機リスト
-            exps.add(Explosion(emy, 100))  # 敵機の爆発エフェクト
+
+            for bomb in pg.sprite.groupcollide(bombs, shield, True, True).keys():  # 防御壁と衝突した爆弾リスト
+                exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+
+            for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
+                if bird.state == "hyper":  # state="hyper"なら
+                    exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+                    score.value += 1  # 1点アップ
+                else:
+                    stage_manager.gameover(screen)
         
-        for bomb in pg.sprite.groupcollide(bombs, gra, True, False).keys():  # 重力と衝突した爆弾リスト
-            exps.add(Explosion(bomb, 50))  # 爆弾の爆発エフェクト
+                    # 初期化処理を追加
+                    score = Score()  # スコアをリセット
+                    stage_manager = StageManager(bird, score)  # ステージ情報をリセット
+                    tmr = 0  # タイマーをリセット
+                    emys.empty()  # 敵キャラクターを全て削除
+                    bombs.empty()  # 爆弾を全て削除
+                    wait_for_start(screen)  # タイトル画面に戻る
+                    break  # ゲームループから抜ける
 
 
-        bird.update(key_lst, screen)
-        beams.update()
-        beams.draw(screen)
-        emys.update()
-        emys.draw(screen)
-        bombs.update()
-        bombs.draw(screen)
-        exps.update()
-        exps.draw(screen)
-        gra.update(screen)
-        score.update(screen)
-        shield.update()
-        shield.draw(screen)
-        pg.display.update()
-        tmr += 1
-        clock.tick(50)
+            for emy in pg.sprite.groupcollide(emys, gra, True, False).keys():  # 重力と衝突した敵機リスト
+                exps.add(Explosion(emy, 100))  # 敵機の爆発エフェクト
+            
+            for bomb in pg.sprite.groupcollide(bombs, gra, True, False).keys():  # 重力と衝突した爆弾リスト
+                exps.add(Explosion(bomb, 50))  # 爆弾の爆発エフェクト
+
+            # ステージクリア処理
+            if stage_manager.check_stage_clear(screen):
+                continue  # ステージ遷移
+
+            # ゲームクリア処理
+            if stage_manager.check_game_clear(screen):
+                time.sleep(2)
+                break  # タイトル画面に戻る
+
+            # ゲームオーバー処理
+            for bomb in pg.sprite.spritecollide(bird, bombs, True):
+                if bird.state != "hyper":
+                    stage_manager.gameover(screen)
+                    break  # タイトル画面に戻る
+                
+            bird.update(key_lst, screen)
+            beams.update()
+            beams.draw(screen)
+            emys.update()
+            emys.draw(screen)
+            bombs.update()
+            bombs.draw(screen)
+            exps.update()
+            exps.draw(screen)
+            gra.update(screen)
+            score.update(screen)
+            shield.update()
+            shield.draw(screen)
+            stage_manager.display_stage(screen)  # ステージ番号を右下に表示
+            pg.display.update()
+            tmr += 1
+            clock.tick(50)
 
 
 if __name__ == "__main__":
@@ -478,3 +730,4 @@ if __name__ == "__main__":
     main()
     pg.quit()
     sys.exit()
+
