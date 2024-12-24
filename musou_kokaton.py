@@ -322,7 +322,7 @@ class Score:
     def __init__(self):
         self.font = pg.font.Font(None, 50)
         self.color = (0, 0, 255)
-        self.value = 1000
+        self.value = 0
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         self.rect = self.image.get_rect()
         self.rect.center = 100, HEIGHT-50
@@ -446,7 +446,7 @@ class StageManager:
         
     def check_stage_clear(self, screen):
         """ステージ 1 のクリア条件を満たしたか確認"""
-        if self.stage == 1 and self.enemy_kill_count >= 15:
+        if self.stage == 1 and self.enemy_kill_count >=15:
             self.display_stage_clear(screen)
             self.stage += 1
             time.sleep(2)  # ステージ遷移時に静止
