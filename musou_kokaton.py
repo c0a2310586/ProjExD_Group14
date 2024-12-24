@@ -295,7 +295,7 @@ class Shield(pg.sprite.Sprite):
 
 class Boss(pg.sprite.Sprite):
     """
-    ボスに関するクラス
+    bossに関するクラス
     """
     def __init__(self, health: int):
         super().__init__()
@@ -304,7 +304,7 @@ class Boss(pg.sprite.Sprite):
         self.health = health  # ボスの耐久値
         self.speed = 2  # 移動速度
         self.direction = 1  # 移動方向 (左右)
-        self.attack_interval = 30  # 攻撃間隔（フレーム数）※更に短くする
+        self.attack_interval = 30  # 攻撃間隔
         self.timer = 0  # 攻撃タイマー
 
     def update(self, bombs: pg.sprite.Group, bird: Bird):
@@ -315,7 +315,6 @@ class Boss(pg.sprite.Sprite):
         self.rect.x += self.speed * self.direction
         if self.rect.left < 0 or self.rect.right > WIDTH:
             self.direction *= -1
-
         # 攻撃処理
         self.timer += 1
         if self.timer >= self.attack_interval:
