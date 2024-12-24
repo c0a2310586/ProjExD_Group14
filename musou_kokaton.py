@@ -822,16 +822,16 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_s:
                 shield.add(Shield(bird, life=400))
                 score.value -= 50  # スコア消費
-            if score.value >= 200 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score200以上で
+            if score.value >= 100 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score200以上で
                 # print("AAA")
-                score.value -= 200  # scoreのうち200を消費
+                score.value -= 100  # scoreのうち200を消費
                 gra.add(Gravity())
             if event.type == pg.KEYDOWN and event.key == pg.K_s:
                 shield.add(Shield(bird, life=400))
             if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:
                 bird.state = "hyper"
-                bird.hyper_life = 500
-                score.value -= 100  # スコア消費
+                bird.hyper_life = 50
+                score.value -= 50  # スコア消費
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_SPACE:
                     beams.add(Beam(bird))
