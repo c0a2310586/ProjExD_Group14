@@ -82,10 +82,10 @@ class Bird(pg.sprite.Sprite):
     ゲームキャラクター（こうかとん）に関するクラス
     """
     delta = {  # 押下キーと移動量の辞書
-        pg.K_UP: (0, -1),
-        pg.K_DOWN: (0, +1),
-        pg.K_LEFT: (-1, 0),
-        pg.K_RIGHT: (+1, 0),
+        pg.K_w: (0, -1),
+        pg.K_s: (0, +1),
+        pg.K_a: (-1, 0),
+        pg.K_d: (+1, 0),
     }
 
     def __init__(self, num: int, xy: tuple[int, int]):
@@ -124,7 +124,7 @@ class Bird(pg.sprite.Sprite):
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 0.9)
         screen.blit(self.image, self.rect)
 
-    def update(self, key_lst: list[bool], screen: pg.Surface):
+    def update(self, key_lst: list[bool], lclick, senkai, screen: pg.Surface):
         """
         押下キーに応じてこうかとんを移動させる
         引数1 key_lst：押下キーの真理値リスト
@@ -146,7 +146,21 @@ class Bird(pg.sprite.Sprite):
             self.hyper_life -= 1
             if self.hyper_life < 0:
                 self.state = "normal"  # 無敵状態終了
-        screen.blit(self.image, self.rect)
+
+        if lclick is True:  # beamから向き判定の適用
+        #     screen.blit(self.image, self.rect)
+        # else:
+        #     screen.blit(pg.transform.rotozoom(pg.transform.flip(img0, True, True), self.angle, 0.9), self.rect)
+            if senkai <= 90:  #右半分
+                self.birdimg = pg.transform.rotozoom(pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 1), True, False), senkai, 1.1)
+                print("R")
+            else:  # 左半分
+                self.birdimg = pg.transform.rotozoom(pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 1), True, True), senkai, 1.1)
+                print("L")
+            screen.blit(self.birdimg, self.rect)
+        else:
+            screen.blit(self.image, self.rect)
+
         if key_lst[pg.K_LSHIFT]:
             self.speed = 20
         else:
@@ -212,12 +226,25 @@ class Beam(pg.sprite.Sprite):
     def __init__(self, bird: Bird, angle: float = 0):
         """
         ビーム画像Surfaceを生成する
+        取得したマウスカーソルの座標に向けて、こうかとんから飛んでいく
         引数 bird：ビームを放つこうかとん
         """
         super().__init__()
         self.vx, self.vy = bird.dire
-        angle += math.degrees(math.atan2(-self.vy, self.vx))
+        mousex, mousey = pg.mouse.get_pos()
+
+        angle = 90 + math.degrees(math.atan2(bird.rect.centerx - mousex, bird.rect.centery - mousey))  # atan2が三角関数より弧度法で算出, degreesで度数法に変換
+        self.angle = angle
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
+
+        # img0 = pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 0.9)  # 発射向きによってこうかとんを旋回
+        # if self.angle <= 90:  #右半分
+        #     self.birdimg = pg.transform.rotozoom(pg.transform.flip(img0, True, False), self.angle, 0.9)
+        #     print("R")
+        # else:  # 左半分
+        #     self.birdimg = pg.transform.rotozoom(pg.transform.flip(img0, True, True), self.angle, 0.9)
+        #     print("L")
+
         rad_angle = math.radians(angle)
         self.vx = math.cos(rad_angle)
         self.vy = -math.sin(rad_angle)
@@ -226,14 +253,27 @@ class Beam(pg.sprite.Sprite):
         self.rect.centerx = bird.rect.centerx + bird.rect.width * self.vx
         self.speed = 10
 
-    def update(self):
+    def update(self, bird: Bird, screen: pg.surface):
         """
         ビームを速度ベクトルself.vx, self.vyに基づき移動させる
         引数 screen：画面Surface
         """
         self.rect.move_ip(self.speed*self.vx, self.speed*self.vy)
+        # img0 = pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 0.9)
+        # print(self.angle)
+        # if -90 < self.angle < 90:
+        # if self.angle <= 90:
+        #     screen.blit(pg.transform.rotozoom(pg.transform.flip(img0, True, False), self.angle, 0.9), self.rect)
+        #     print("R")
+        # else:
+        #     screen.blit(pg.transform.rotozoom(pg.transform.flip(img0, True, True), self.angle, 0.9), self.rect)
+        #     print("L")
+        # screen.blit(self.birdimg, bird.rect)
         if check_bound(self.rect) != (True, True):
             self.kill()
+
+    def senkai(self):
+        return self.angle
 
 
 class Explosion(pg.sprite.Sprite):
@@ -401,6 +441,8 @@ class Score:
     def update(self, screen: pg.Surface):
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
+
+
 class EMP:
     def __init__(self, enemies, bombs, screen):
         self.enemies = enemies
@@ -726,9 +768,22 @@ def wait_for_start(screen):
                     sys.exit()
 
 
+def mouse_setting():
+    """
+    マウスカーソルを可視または不可視にする関数
+    """
+    pg.mouse.set_visible(True)
+    print(pg.mouse.get_cursor())
+    # pg.cursor.compile(strings, black='X', white='.', xor='o')
+    # pg.mouse.set_cursor()
+
+
 def main():
     while True:
         pg.display.set_caption("真！こうかとん無双")
+    
+        mouse_setting()  # カーソルの設定（可視不可視など）の関数
+
         screen = pg.display.set_mode((WIDTH, HEIGHT))
         bg_img = pg.image.load(f"fig/pg_bg.jpg")
         score = Score()
@@ -750,36 +805,45 @@ def main():
         tmr = 0
         clock = pg.time.Clock()
 
+        mouse_click = False
+        senkai = 0
+
+
         while True:
             key_lst = pg.key.get_pressed()
+            mouse_lst = pg.mouse.get_pressed()  # mouseの押下されたボタンのリスト
+
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     return 0
 
-                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_s:
+                shield.add(Shield(bird, life=400))
+                score.value -= 50  # スコア消費
+            if score.value >= 200 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score200以上で
+                # print("AAA")
+                score.value -= 200  # scoreのうち200を消費
+                gra.add(Gravity())
+            if event.type == pg.KEYDOWN and event.key == pg.K_s:
+                shield.add(Shield(bird, life=400))
+            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:
+                bird.state = "hyper"
+                bird.hyper_life = 500
+                score.value -= 100  # スコア消費
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE:
                     beams.add(Beam(bird))
-                if score.value >= 50 and (event.type == pg.KEYDOWN and event.key == pg.K_s):
-                    shield.add(Shield(bird, life=400))
-                    score.value -= 50  # スコア消費
-                if score.value >= 200 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score200以上で
-                    score.value -= 200  # scoreのうち200を消費
-                    gra.add(Gravity())
-                if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:
-                    bird.state = "hyper"
-                    bird.hyper_life = 500
-                    score.value -= 100  # スコア消費
-                if event.type == pg.KEYDOWN:
-                    if event.key == pg.K_SPACE:
-                        beams.add(Beam(bird))
-                    if key_lst[pg.K_LALT] and event.key == pg.K_SPACE:
-                        neo_beam = NeoBeam(bird, 5)
-                        beams.add(*neo_beam.gen_beams())
-                if score.value >= 20 and key_lst[pg.K_e] and not emp.active:
-                    if score.value >= 20:
-                        score.value -= 20
-                    emp.activate()
-                elif emp.active and key_lst[pg.K_e]:
-                    emp.deactivate()
+                if key_lst[pg.K_LALT] and event.key == pg.K_SPACE:
+                    neo_beam = NeoBeam(bird, 5)
+                    beams.add(*neo_beam.gen_beams())
+            if score.value >= 20 and key_lst[pg.K_e] and not emp.active:
+                if score.value >= 20:
+                    score.value -= 20
+                emp.activate()
+            elif emp.active and key_lst[pg.K_e]:
+                emp.deactivate()
 
             screen.blit(bg_img, [0, 0])
 
@@ -861,9 +925,8 @@ def main():
                     stage_manager.gameover(screen)
                     break # タイトル画面に戻る
 
-
-            bird.update(key_lst, screen)
-            beams.update()
+            bird.update(key_lst, mouse_click, senkai, screen)
+            beams.update(bird, screen)
             beams.draw(screen)
             emys.update()
             emys.draw(screen)
