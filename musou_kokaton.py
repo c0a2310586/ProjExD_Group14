@@ -492,9 +492,9 @@ def main():
         for emy in emys:
             if emy.state == "stop" and tmr%emy.interval == 0:
                 # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
-                if score.value < 100:
+                if score.value < 50:
                     bombs.add(Bomb(emy, bird, 6))
-                elif score.value < 500:
+                elif score.value < 100:
                     bomb_pro = BombProjectile(emy, bird, 3, 8)
                     bombs.add(*bomb_pro.gen_bombs())
                 else:
