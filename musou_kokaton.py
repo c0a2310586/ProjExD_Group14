@@ -85,7 +85,7 @@ class Bird(pg.sprite.Sprite):
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/{num}.png"), 0, 0.9)
         screen.blit(self.image, self.rect)
 
-    def update(self, key_lst: list[bool], screen: pg.Surface):
+    def update(self, key_lst: list[bool], lclick, senkai, screen: pg.Surface):
         """
         押下キーに応じてこうかとんを移動させる
         引数1 key_lst：押下キーの真理値リスト
@@ -107,7 +107,21 @@ class Bird(pg.sprite.Sprite):
             self.hyper_life -= 1
             if self.hyper_life < 0:
                 self.state = "normal"  # 無敵状態終了
-        screen.blit(self.image, self.rect)
+
+        if lclick is True:  # beamから向き判定の適用
+        #     screen.blit(self.image, self.rect)
+        # else:
+        #     screen.blit(pg.transform.rotozoom(pg.transform.flip(img0, True, True), self.angle, 0.9), self.rect)
+            if senkai <= 90:  #右半分
+                self.birdimg = pg.transform.rotozoom(pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 1), True, False), senkai, 1.1)
+                print("R")
+            else:  # 左半分
+                self.birdimg = pg.transform.rotozoom(pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 1), True, True), senkai, 1.1)
+                print("L")
+            screen.blit(self.birdimg, self.rect)
+        else:
+            screen.blit(self.image, self.rect)
+
         if key_lst[pg.K_LSHIFT]:
             self.speed = 20
         else:
@@ -164,7 +178,16 @@ class Beam(pg.sprite.Sprite):
         mousex, mousey = pg.mouse.get_pos()
 
         angle = 90 + math.degrees(math.atan2(bird.rect.centerx - mousex, bird.rect.centery - mousey))  # atan2が三角関数より弧度法で算出, degreesで度数法に変換
+        self.angle = angle
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
+
+        # img0 = pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 0.9)  # 発射向きによってこうかとんを旋回
+        # if self.angle <= 90:  #右半分
+        #     self.birdimg = pg.transform.rotozoom(pg.transform.flip(img0, True, False), self.angle, 0.9)
+        #     print("R")
+        # else:  # 左半分
+        #     self.birdimg = pg.transform.rotozoom(pg.transform.flip(img0, True, True), self.angle, 0.9)
+        #     print("L")
 
         rad_angle = math.radians(angle)
         self.vx = math.cos(rad_angle)
@@ -174,14 +197,27 @@ class Beam(pg.sprite.Sprite):
         self.rect.centerx = bird.rect.centerx + bird.rect.width * self.vx
         self.speed = 10
 
-    def update(self):
+    def update(self, bird: Bird, screen: pg.surface):
         """
         ビームを速度ベクトルself.vx, self.vyに基づき移動させる
         引数 screen：画面Surface
         """
         self.rect.move_ip(self.speed*self.vx, self.speed*self.vy)
+        # img0 = pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 0.9)
+        # print(self.angle)
+        # if -90 < self.angle < 90:
+        # if self.angle <= 90:
+        #     screen.blit(pg.transform.rotozoom(pg.transform.flip(img0, True, False), self.angle, 0.9), self.rect)
+        #     print("R")
+        # else:
+        #     screen.blit(pg.transform.rotozoom(pg.transform.flip(img0, True, True), self.angle, 0.9), self.rect)
+        #     print("L")
+        # screen.blit(self.birdimg, bird.rect)
         if check_bound(self.rect) != (True, True):
             self.kill()
+
+    def senkai(self):
+        return self.angle
 
 
 class Explosion(pg.sprite.Sprite):
@@ -401,6 +437,8 @@ def main():
     tmr = 0
     clock = pg.time.Clock()
 
+    mouse_click = False
+    senkai = 0
 
     while True:
         key_lst = pg.key.get_pressed()
@@ -411,7 +449,13 @@ def main():
                 return 0
 
             if mouse_lst[0] == True:  # 右クリックがあれば条件式に入る
-                beams.add(Beam(bird))
+                if mouse_click is not True:
+                    a = Beam(bird)
+                    beams.add(a)
+                    senkai = a.senkai()
+                mouse_click = True
+            else:
+                mouse_click = False
             if event.type == pg.KEYDOWN and event.key == pg.K_q:  # Qキーでシールド
                 shield.add(Shield(bird, life=400))
                 score.value -= 50  # スコア消費
@@ -471,9 +515,8 @@ def main():
         for bomb in pg.sprite.groupcollide(bombs, gra, True, False).keys():  # 重力と衝突した爆弾リスト
             exps.add(Explosion(bomb, 50))  # 爆弾の爆発エフェクト
 
-
-        bird.update(key_lst, screen)
-        beams.update()
+        bird.update(key_lst, mouse_click, senkai, screen)
+        beams.update(bird, screen)
         beams.draw(screen)
         emys.update()
         emys.draw(screen)
