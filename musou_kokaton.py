@@ -472,6 +472,68 @@ class Shield(pg.sprite.Sprite):
             self.kill()
 
 
+class Boss(pg.sprite.Sprite):
+    """
+    ボスに関するクラス
+    """
+    def __init__(self, health: int):
+        super().__init__()
+        self.image = pg.transform.rotozoom(pg.image.load("fig/boss.png"), 0, 1.2)
+        self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+        self.health = health # ボスの耐久値
+        self.speed = 2 # 移動速度
+        self.direction = 1 # 移動方向 (左右)
+        self.attack_interval = 30 # 攻撃間隔（フレーム数）※更に短くする
+        self.timer = 0 # 攻撃タイマー
+
+    def update(self, bombs: pg.sprite.Group, bird: Bird):
+        """
+        Bossの移動と攻撃処理
+        """
+        # 左右に移動
+        self.rect.x += self.speed * self.direction
+        if self.rect.left < 0 or self.rect.right > WIDTH:
+            self.direction *= -1
+
+        # 攻撃処理
+        self.timer += 1
+        if self.timer >= self.attack_interval:
+            self.shoot(bombs, bird)
+            self.timer = 0 # タイマーをリセット
+
+    def shoot(self, bombs: pg.sprite.Group, bird: Bird):
+        """
+        Bossが多方向に高速爆弾を発射する
+        """
+        angles = [-30, -15, 0, 15, 30] # 多方向に発射する角度
+        for angle in angles:
+            bombs.add(BossBomb(self.rect.center, bird, angle, speed=10)) # 更に速い速度
+
+
+class BossBomb(pg.sprite.Sprite):
+    """
+    Boss専用の爆弾クラス（多方向攻撃）
+    """
+    def __init__(self, center: tuple, bird: Bird, angle: float, speed: float):
+        super().__init__()
+        self.state = "active"
+        rad = 20 # 爆弾円の半径
+        self.image = pg.Surface((2 * rad, 2 * rad), pg.SRCALPHA)
+        pg.draw.circle(self.image, (255, 0, 0), (rad, rad), rad)
+        self.rect = self.image.get_rect(center=center)
+
+        # 方向ベクトルを計算（angle分だけずらす）
+        base_angle = math.atan2(bird.rect.centery - center[1], bird.rect.centerx - center[0])
+        adjusted_angle = base_angle + math.radians(angle)
+        self.vx = math.cos(adjusted_angle) * speed
+        self.vy = math.sin(adjusted_angle) * speed
+
+    def update(self):
+        self.rect.move_ip(self.vx, self.vy)
+        if check_bound(self.rect) != (True, True):
+            self.kill()
+
+
 class StartScreen:
     """
     ゲーム開始画面を管理するクラス
@@ -524,7 +586,7 @@ class StageManager:
 
     def check_stage_clear(self, screen):
         """ステージ 1 のクリア条件を満たしたか確認"""
-        if self.stage == 1 and self.enemy_kill_count >= 15:
+        if self.stage == 1 and self.enemy_kill_count >= 3:
             self.display_stage_clear(screen)
             self.stage += 1
             time.sleep(2) # ステージ遷移時に静止
@@ -541,9 +603,9 @@ class StageManager:
         screen.blit(text, rect)
         pg.display.update()
 
-    def check_game_clear(self, screen):
+    def check_game_clear(self, screen, bosses):
         """ゲームクリア条件 (ボスを倒したか) を確認"""
-        if self.stage == 2 and self.enemy_kill_count >= 16: # ボスが倒されたら
+        if self.stage == 2 and not bosses: # ボスが倒されたら
             self.display_game_clear(screen)
             time.sleep(3) # ゲームクリア後に静止
             return True
@@ -636,7 +698,7 @@ class StageManager:
 
         else: # ステージ2
             # ボスの画像を読み込む
-            boss_image = pg.image.load("fig/alien2.png")
+            boss_image = pg.image.load("fig/boss.png")
             boss_image = pg.transform.scale(boss_image, (30, 30))
             boss_text = stage_font.render("ボス", True, (255, 255, 255))
             boss_rect = boss_text.get_rect(topright=(WIDTH - 100, 20))
@@ -682,6 +744,8 @@ def main():
         shield = pg.sprite.Group()
         gra = pg.sprite.Group()
         emp = EMP(emys, bombs, screen)
+        bosses = pg.sprite.Group()
+        boss_count = 0 # Boss数
         stage_manager = StageManager(bird, score)
         tmr = 0
         clock = pg.time.Clock()
@@ -734,9 +798,10 @@ def main():
                         bomb_pro = BombProjectile(emy, bird, 5, 10)
                         bombs.add(*bomb_pro.gen_bombs())
                         
-            # ボス (仮で雑魚敵) の生成: ステージ 2
-            if stage_manager.stage == 2 and len(emys) == 0:  # ボス未生成の場合
-                emys.add(Enemy())  # ボス敵を出現 (本来のボス処理は後で追加)
+            # ボスの生成: ステージ 2
+            if stage_manager.stage == 2 and boss_count == 0:  
+                bosses.add(Boss(health=100))
+                boss_count += 1 # Boss数量更新
 
             for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():  # ビームと衝突した敵機リスト
                 exps.add(Explosion(emy, 100))  # 爆発エフェクト
@@ -776,11 +841,18 @@ def main():
             for bomb in pg.sprite.groupcollide(bombs, gra, True, False).keys():  # 重力と衝突した爆弾リスト
                 exps.add(Explosion(bomb, 50))  # 爆弾の爆発エフェクト
 
+            # Bossとビームの衝突判定
+            for boss in pg.sprite.groupcollide(bosses, beams, False, True).keys():
+                boss.health -= 1
+                if boss.health <= 0:
+                    exps.add(Explosion(boss, 200))
+                    boss.kill()
+
             # ステージクリア処理
             if stage_manager.check_stage_clear(screen):
                 continue # ステージ遷移
             # ゲームクリア処理
-            if stage_manager.check_game_clear(screen):
+            if stage_manager.check_game_clear(screen, bosses):
                 time.sleep(2)
                 break # タイトル画面に戻る
             # ゲームオーバー処理
@@ -803,6 +875,8 @@ def main():
             # booms.draw(screen)
             gra.update(screen)
             score.update(screen)
+            bosses.update(bombs, bird)
+            bosses.draw(screen)
             shield.update()
             shield.draw(screen)
             stage_manager.display_stage(screen)  # ステージ番号を右下に表示
