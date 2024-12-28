@@ -43,10 +43,13 @@ def show_instructions(screen):
     instructions = [
         "操作説明:",
     "矢印キー: こうかとんを移動",
-    "スペースキー: ビーム発射",
-    "Shiftキー: 高速移動",
-    "RShift: 無敵モード (20スコア消費)",
-    "Sキー: 防御壁 (50スコア消費)",
+    "左Shiftキー: 高速化",
+    "左クリック: ビーム発射",
+    "右クリック: 弾幕",
+    "リターンキー: 重力場 (100スコア消費)",
+    "RShift: 無敵モード (50スコア消費)",
+    "[l]キー: 防御壁 (50スコア消費)",
+    "[e]キー: 敵機と爆弾の無効化 (20スコア消費)",
     ]
 
     screen.fill((0, 0, 0)) # 背景を黒に塗りつぶす
@@ -153,10 +156,8 @@ class Bird(pg.sprite.Sprite):
         #     screen.blit(pg.transform.rotozoom(pg.transform.flip(img0, True, True), self.angle, 0.9), self.rect)
             if senkai <= 90:  #右半分
                 self.birdimg = pg.transform.rotozoom(pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 1), True, False), senkai, 1.1)
-                print("R")
             else:  # 左半分
                 self.birdimg = pg.transform.rotozoom(pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 1), True, True), senkai, 1.1)
-                print("L")
             screen.blit(self.birdimg, self.rect)
         else:
             screen.blit(self.image, self.rect)
@@ -223,31 +224,26 @@ class Beam(pg.sprite.Sprite):
     """
     ビームに関するクラス
     """
-    def __init__(self, bird: Bird, angle: float = 0):
+    def __init__(self, bird: Bird, angle0: float=0):
         """
         ビーム画像Surfaceを生成する
         取得したマウスカーソルの座標に向けて、こうかとんから飛んでいく
         引数 bird：ビームを放つこうかとん
+        引数 angle：ビームの発射角度（Noneの場合、マウス方向）
         """
         super().__init__()
-        self.vx, self.vy = bird.dire
+        self.vx, self.vy = bird.dire 
         mousex, mousey = pg.mouse.get_pos()
-
         angle = 90 + math.degrees(math.atan2(bird.rect.centerx - mousex, bird.rect.centery - mousey))  # atan2が三角関数より弧度法で算出, degreesで度数法に変換
         self.angle = angle
-        self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 1.0)
-
-        # img0 = pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 0.9)  # 発射向きによってこうかとんを旋回
-        # if self.angle <= 90:  #右半分
-        #     self.birdimg = pg.transform.rotozoom(pg.transform.flip(img0, True, False), self.angle, 0.9)
-        #     print("R")
-        # else:  # 左半分
-        #     self.birdimg = pg.transform.rotozoom(pg.transform.flip(img0, True, True), self.angle, 0.9)
-        #     print("L")
-
         rad_angle = math.radians(angle)
         self.vx = math.cos(rad_angle)
         self.vy = -math.sin(rad_angle)
+        angle0 += self.angle  # 追加されたangle0との合成
+        self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle0, 1.0)
+        rad_angle0 = math.radians(angle0)
+        self.vx = math.cos(rad_angle0)
+        self.vy = -math.sin(rad_angle0)
         self.rect = self.image.get_rect()
         self.rect.centery = bird.rect.centery + bird.rect.height * self.vy
         self.rect.centerx = bird.rect.centerx + bird.rect.width * self.vx
@@ -259,16 +255,7 @@ class Beam(pg.sprite.Sprite):
         引数 screen：画面Surface
         """
         self.rect.move_ip(self.speed*self.vx, self.speed*self.vy)
-        # img0 = pg.transform.rotozoom(pg.image.load(f"fig/3.png"), 0, 0.9)
-        # print(self.angle)
-        # if -90 < self.angle < 90:
-        # if self.angle <= 90:
-        #     screen.blit(pg.transform.rotozoom(pg.transform.flip(img0, True, False), self.angle, 0.9), self.rect)
-        #     print("R")
-        # else:
-        #     screen.blit(pg.transform.rotozoom(pg.transform.flip(img0, True, True), self.angle, 0.9), self.rect)
-        #     print("L")
-        # screen.blit(self.birdimg, bird.rect)
+        
         if check_bound(self.rect) != (True, True):
             self.kill()
 
@@ -549,7 +536,7 @@ class Boss(pg.sprite.Sprite):
         """
         angles = [-30, -15, 0, 15, 30] # 多方向に発射する角度
         for angle in angles:
-            bombs.add(BossBomb(self.rect.center, bird, angle, speed=10)) # 更に速い速度
+            bombs.add(BossBomb(self.rect.center, bird, angle, speed=15)) # 更に速い速度
 
 
 class BossBomb(pg.sprite.Sprite):
@@ -621,19 +608,36 @@ class StageManager:
         self.score = score
         self.enemy_kill_count = 0 # 倒した敵の数
         self.font = pg.font.Font(None, 50)
-        """右下に現在のステージ番号を表示"""
-        stage_font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 50) # 日本語フォント
-        stage_text = stage_font.render(f"ステージ: {self.stage}", True, (255, 0, 0)) # 赤色で描画
-        stage_rect = stage_text.get_rect(bottomright=(WIDTH - 10, HEIGHT - 10))
+        self.neobeam_ready = False  # NeoBeamの使用可能状態
+        self.neobeam_uses = 0  # NeoBeam使用可能数
+        self.enemy_kill_for_neobeam = 0
 
-    def check_stage_clear(self, screen):
+    def reset_neobeam_uses(self):
+        """NeoBeamの使用回数をリセット"""
+        self.neobeam_ready = True
+        self.enemy_kill_for_neobeam = 0  # カウントをリセット
+        self.neobeam_uses = 3  # NeoBeamの回数をリセット
+
+    def display_neobeam_status(self, screen: pg.Surface):
+        """NeoBeamの状態を画面に表示"""
+        stage_font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 30) # 日本語フォント
+        if self.neobeam_ready:
+            neo_beams = self.neobeam_uses
+            neobeam_text = stage_font.render(f"NeoBeam: 使用可能(残り{neo_beams}回)", True, (0, 255, 0))  # 緑色で描画
+        else:
+            remaining = max(0, 3 - self.enemy_kill_for_neobeam)
+            neobeam_text = stage_font.render(f"NeoBeam: {remaining}体撃破で使用可能", True, (255, 0, 0))  # 赤色
+        # テキストの位置を設定（画面左上に表示）
+        stage_rect = neobeam_text.get_rect(topleft=(50, 20))
+        screen.blit(neobeam_text, stage_rect)  # テキストを描画
+
+    def check_stage_clear(self, screen, emys):
         """ステージ 1 のクリア条件を満たしたか確認"""
-        if self.stage == 1 and self.enemy_kill_count >= 3:
+        if self.stage == 1 and self.enemy_kill_count >= 15:
             self.display_stage_clear(screen)
+            emys.empty()  # ステージ1の敵をすべて消去
             self.stage += 1
-            time.sleep(2) # ステージ遷移時に静止
-            # ボス生成 (コメントアウトで準備)
-            # ボス生成処理をここに記述
+            time.sleep(2) 
             return True
         return False
         
@@ -645,9 +649,9 @@ class StageManager:
         screen.blit(text, rect)
         pg.display.update()
 
-    def check_game_clear(self, screen, bosses):
+    def check_game_clear(self, screen, b_health):
         """ゲームクリア条件 (ボスを倒したか) を確認"""
-        if self.stage == 2 and not bosses: # ボスが倒されたら
+        if self.stage == 2 and b_health == 0: # ボスが倒されたら
             self.display_game_clear(screen)
             time.sleep(3) # ゲームクリア後に静止
             return True
@@ -804,46 +808,53 @@ def main():
         stage_manager = StageManager(bird, score)
         tmr = 0
         clock = pg.time.Clock()
-
         mouse_click = False
         senkai = 0
-
 
         while True:
             key_lst = pg.key.get_pressed()
             mouse_lst = pg.mouse.get_pressed()  # mouseの押下されたボタンのリスト
+            if mouse_lst[0] == True:  # 左クリックがあれば条件式に入る
+                bird.change_img(3, screen)  # こうかとんエフェクト
+                if not mouse_click:
+                    a = Beam(bird)
+                    beams.add(a)
+                    senkai = a.senkai()
+                mouse_click = True
 
-            for event in pg.event.get():
+            elif mouse_lst[2] and stage_manager.neobeam_uses > 0:  # 右クリックでNeoBeam発射
+                bird.change_img(3, screen)  # こうかとんエフェクト
+                if not mouse_click:
+                    neo_beam = NeoBeam(bird, 5)  # NeoBeamを生成（5方向）
+                    beams.add(*neo_beam.gen_beams())  # 複数ビームを追加
+                    stage_manager.enemy_kill_for_neobeam == 0  # 使用後に0
+                    stage_manager.neobeam_uses -= 1  # 使用可能回数を減少
+                    if stage_manager.neobeam_uses == 0:
+                        stage_manager.neobeam_ready = False
+                mouse_click = True
+            else:
+                mouse_click = False
+
+            for event in pg.event.get():  # イベントリストを取得
                 if event.type == pg.QUIT:
                     return 0
-
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beams.add(Beam(bird))
-            if event.type == pg.KEYDOWN and event.key == pg.K_s:
-                shield.add(Shield(bird, life=400))
-                score.value -= 50  # スコア消費
-            if score.value >= 100 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score200以上で
-                # print("AAA")
-                score.value -= 100  # scoreのうち200を消費
-                gra.add(Gravity())
-            if event.type == pg.KEYDOWN and event.key == pg.K_s:
-                shield.add(Shield(bird, life=400))
-            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:
-                bird.state = "hyper"
-                bird.hyper_life = 50
-                score.value -= 50  # スコア消費
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_SPACE:
-                    beams.add(Beam(bird))
-                if key_lst[pg.K_LALT] and event.key == pg.K_SPACE:
-                    neo_beam = NeoBeam(bird, 5)
-                    beams.add(*neo_beam.gen_beams())
-            if score.value >= 20 and key_lst[pg.K_e] and not emp.active:
-                if score.value >= 20:
-                    score.value -= 20
-                emp.activate()
-            elif emp.active and key_lst[pg.K_e]:
-                emp.deactivate()
+                
+                if score.value >= 50 and (event.type == pg.KEYDOWN and event.key == pg.K_l):
+                    shield.add(Shield(bird, life=400))
+                    score.value -= 50  # スコア消費
+                if score.value >= 100 and (event.type == pg.KEYDOWN and event.key == pg.K_RETURN):  # score100以上で
+                    score.value -= 100  # scoreのうち100を消費
+                    gra.add(Gravity())
+                if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value > 100:
+                    bird.state = "hyper"
+                    bird.hyper_life = 50
+                    score.value -= 50  # スコア消費
+                if score.value >= 20 and key_lst[pg.K_e] and not emp.active:
+                    if score.value >= 20:
+                        score.value -= 20
+                    emp.activate()
+                elif emp.active and key_lst[pg.K_e]:
+                    emp.deactivate()
 
             screen.blit(bg_img, [0, 0])
 
@@ -853,7 +864,7 @@ def main():
             for emy in emys:
                 if emy.state == "stop" and tmr%emy.interval == 0:
                     # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
-                    if score.value < 50:
+                    if score.value < 50 or boss_count == 1:
                         bombs.add(Bomb(emy, bird, 6))
                     elif score.value < 100:
                         bomb_pro = BombProjectile(emy, bird, 3, 8)
@@ -863,19 +874,30 @@ def main():
                         bombs.add(*bomb_pro.gen_bombs())
                         
             # ボスの生成: ステージ 2
-            if stage_manager.stage == 2 and boss_count == 0:  
-                bosses.add(Boss(health=100))
-                boss_count += 1 # Boss数量更新
+            if stage_manager.stage == 2:
+                if boss_count == 0:
+                    bosses.add(Boss(health=30))
+                    boss_count = 1  # Bossが生成されたことを記録
+
+                if tmr % 150 == 0 and len(emys) < 3:  # 敵を定期的に生成し、敵の数を3体まで制限する
+                    emys.add(Enemy())
+                    for emy in emys:
+                        if emy.state == "stop" and tmr % emy.interval == 0:
+                            bombs.add(Bomb(emy, bird, 6))
 
             for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():  # ビームと衝突した敵機リスト
                 exps.add(Explosion(emy, 100))  # 爆発エフェクト
                 score.value += 10  # 10点アップ
-                bird.change_img(6, screen)  # こうかとん喜びエフェクト
+                bird.change_img(9, screen)  # こうかとん歌うエフェクト
                 stage_manager.enemy_kill_count += 1
+                stage_manager.enemy_kill_for_neobeam += 1  # NeoBeam用のカウントを増やす
+                if stage_manager.enemy_kill_for_neobeam >= 3:
+                    stage_manager.reset_neobeam_uses()
 
             for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
                 if bomb.state == "active":
                     exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+                    bird.change_img(6, screen)  # こうかとん喜びエフェクト
                     score.value += 1  # 1点アップ
 
             for bomb in pg.sprite.groupcollide(bombs, shield, True, True).keys():  # 防御壁と衝突した爆弾リスト
@@ -891,11 +913,14 @@ def main():
                         stage_manager.gameover(screen)
 
                         # 初期化処理を追加
-                        score = Score() # スコアをリセット
-                        stage_manager = StageManager(bird, score) # ステージ情報をリセット
-                        tmr = 0 # タイマーをリセット
-                        emys.empty() # 敵キャラクターを全て削除
-                        bombs.empty() # 爆弾を全て削除
+                        score = Score()  # スコアをリセット
+                        stage_manager = StageManager(bird, score)  # ステージ情報をリセット
+                        tmr = 0  # タイマーをリセット
+                        emys.empty()  # 敵キャラクターを全て削除
+                        bombs.empty()  # 爆弾を全て削除
+                        bosses.empty()  #　ボスを削除
+                        exps.empty()
+                        boss_count = 0
                         wait_for_start(screen) # タイトル画面に戻る
                         break # ゲームループから抜ける
                         
@@ -910,15 +935,16 @@ def main():
                 boss.health -= 1
                 if boss.health <= 0:
                     exps.add(Explosion(boss, 200))
-                    boss.kill()
 
             # ステージクリア処理
-            if stage_manager.check_stage_clear(screen):
+            if stage_manager.check_stage_clear(screen, emys):
                 continue # ステージ遷移
             # ゲームクリア処理
-            if stage_manager.check_game_clear(screen, bosses):
-                time.sleep(2)
-                break # タイトル画面に戻る
+            for boss in bosses:
+                b_health = boss.health
+                if stage_manager.check_game_clear(screen, b_health):
+                    time.sleep(2)
+                    return
             # ゲームオーバー処理
             for bomb in pg.sprite.spritecollide(bird, bombs, True):
                 if bird.state != "hyper":
@@ -943,6 +969,7 @@ def main():
             shield.update()
             shield.draw(screen)
             stage_manager.display_stage(screen)  # ステージ番号を右下に表示
+            stage_manager.display_neobeam_status(screen)  # NeoBeamの状態を表示
             pg.display.update()
             tmr += 1
             clock.tick(50)
