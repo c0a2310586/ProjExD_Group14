@@ -59,14 +59,14 @@ def show_instructions(screen):
 
     # 「Sを押して戻る」のメッセージ
     back_message = "Bキーを押して戻る"
-    back_text = font.render(back_message, True, (255, 0, 0)) # 赤色で描画
-    screen.blit(back_text, (50, 50 + len(instructions) * 60)) # 操作説明の下に表示
+    back_text = font.render(back_message, True, (255, 0, 0))  # 赤色で描画
+    screen.blit(back_text, (50, 50 + len(instructions) * 60))  # 操作説明の下に表示
 
-    pg.display.update() # 画面更新
+    pg.display.update()  # 画面更新
     while True:
         for event in pg.event.get():
             if event.type == pg.KEYDOWN and event.key == pg.K_b:
-                return # Sキーで操作説明を終了し、ゲーム開始画面に戻る
+                return  # Sキーで操作説明を終了し、ゲーム開始画面に戻る
 
 def check_game_clear(score: "Score", screen):
     if score.value > 1100:
@@ -510,10 +510,10 @@ class Boss(pg.sprite.Sprite):
         self.image = pg.transform.rotozoom(pg.image.load("fig/boss.png"), 0, 1.2)
         self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT // 4))
         self.health = health # ボスの耐久値
-        self.speed = 2 # 移動速度
-        self.direction = 1 # 移動方向 (左右)
-        self.attack_interval = 30 # 攻撃間隔（フレーム数）※更に短くする
-        self.timer = 0 # 攻撃タイマー
+        self.speed = 2  # 移動速度
+        self.direction = 1  # 移動方向 (左右)
+        self.attack_interval = 30  # 攻撃間隔（フレーム数）※更に短くする
+        self.timer = 0  # 攻撃タイマー
 
     def update(self, bombs: pg.sprite.Group, bird: Bird):
         """
@@ -528,15 +528,15 @@ class Boss(pg.sprite.Sprite):
         self.timer += 1
         if self.timer >= self.attack_interval:
             self.shoot(bombs, bird)
-            self.timer = 0 # タイマーをリセット
+            self.timer = 0  # タイマーをリセット
 
     def shoot(self, bombs: pg.sprite.Group, bird: Bird):
         """
         Bossが多方向に高速爆弾を発射する
         """
-        angles = [-30, -15, 0, 15, 30] # 多方向に発射する角度
+        angles = [-30, -15, 0, 15, 30]  # 多方向に発射する角度
         for angle in angles:
-            bombs.add(BossBomb(self.rect.center, bird, angle, speed=15)) # 更に速い速度
+            bombs.add(BossBomb(self.rect.center, bird, angle, speed=15))  # 更に速い速度
 
 
 class BossBomb(pg.sprite.Sprite):
@@ -546,7 +546,7 @@ class BossBomb(pg.sprite.Sprite):
     def __init__(self, center: tuple, bird: Bird, angle: float, speed: float):
         super().__init__()
         self.state = "active"
-        rad = 20 # 爆弾円の半径
+        rad = 20  # 爆弾円の半径
         self.image = pg.Surface((2 * rad, 2 * rad), pg.SRCALPHA)
         pg.draw.circle(self.image, (255, 0, 0), (rad, rad), rad)
         self.rect = self.image.get_rect(center=center)
@@ -569,33 +569,33 @@ class StartScreen:
     """
     def __init__(self, screen):
         self.screen = screen
-        self.font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80) # 日本語フォント
+        self.font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80)  # 日本語フォント
         self.text = self.font.render("Sキーを押してゲーム開始！", True, (255, 0, 0))
         self.rect = self.text.get_rect(center=(WIDTH//2, HEIGHT//2))
 
         # タイトル表示
-        self.title_font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 100) # タイトルのフォント
+        self.title_font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 100)  # タイトルのフォント
         self.title_text = self.title_font.render("真！真！無双こうかとん", True, (255, 255, 0)) # タイ
         self.title_rect = self.title_text.get_rect(center=(WIDTH//2, HEIGHT//4))
 
         self.instructions = self.font.render("操作説明を見る: Iキー", True, (0, 255, 0))
         self.instructions_rect = self.instructions.get_rect(center=(WIDTH//2, HEIGHT//2 + 100))
 
-        self.exit_text = self.font.render("Xキーを押したら終了", True, (128, 0, 128)) # 紫文字
+        self.exit_text = self.font.render("Xキーを押したら終了", True, (128, 0, 128))  # 紫文字
         self.exit_rect = self.exit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 200))
 
-        self.bg_img = pg.image.load("fig/6.png") # スタート画面の背景画像
+        self.bg_img = pg.image.load("fig/6.png")  # スタート画面の背景画像
 
     def display(self):
         """
         タイトル画面を表示する
         """
-        self.screen.blit(self.bg_img, [0, 0])  # 背景画像を表示
-        self.screen.blit(self.title_text, self.title_rect)  # タイトルを表示
+        self.screen.blit(self.bg_img, [0, 0])   # 背景画像を表示
+        self.screen.blit(self.title_text, self.title_rect)   # タイトルを表示
         self.screen.blit(self.text, self.rect)  # 開始メッセージを表示
-        self.screen.blit(self.instructions, self.instructions_rect)  # 操作説明メッセージを表示
-        self.screen.blit(self.exit_text, self.exit_rect)  # 終了メッセージを表示
-        pg.display.update()  # 画面を更新
+        self.screen.blit(self.instructions, self.instructions_rect)   # 操作説明メッセージを表示
+        self.screen.blit(self.exit_text, self.exit_rect)   # 終了メッセージを表示
+        pg.display.update()   # 画面を更新
 
 
 class StageManager:
@@ -603,10 +603,10 @@ class StageManager:
     ステージ進行を管理するクラス
     """
     def __init__(self, bird: Bird, score: Score):
-        self.stage = 1 # 現在のステージ
+        self.stage = 1  # 現在のステージ
         self.bird = bird
         self.score = score
-        self.enemy_kill_count = 0 # 倒した敵の数
+        self.enemy_kill_count = 0  # 倒した敵の数
         self.font = pg.font.Font(None, 50)
         self.neobeam_ready = False  # NeoBeamの使用可能状態
         self.neobeam_uses = 0  # NeoBeam使用可能数
@@ -620,7 +620,7 @@ class StageManager:
 
     def display_neobeam_status(self, screen: pg.Surface):
         """NeoBeamの状態を画面に表示"""
-        stage_font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 30) # 日本語フォント
+        stage_font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 30)  # 日本語フォント
         if self.neobeam_ready:
             neo_beams = self.neobeam_uses
             neobeam_text = stage_font.render(f"NeoBeam: 使用可能(残り{neo_beams}回)", True, (0, 255, 0))  # 緑色で描画
@@ -643,7 +643,7 @@ class StageManager:
         
     def display_stage_clear(self, screen):
         """ステージクリアメッセージを表示"""
-        font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80) # 日本語フォント
+        font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80)  # 日本語フォント
         text = font.render(f"ステージ {self.stage} クリア！", True, (0, 255, 0))
         rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         screen.blit(text, rect)
@@ -651,7 +651,7 @@ class StageManager:
 
     def check_game_clear(self, screen, b_health):
         """ゲームクリア条件 (ボスを倒したか) を確認"""
-        if self.stage == 2 and b_health == 0: # ボスが倒されたら
+        if self.stage == 2 and b_health == 0:  # ボスが倒されたら
             self.display_game_clear(screen)
             time.sleep(3) # ゲームクリア後に静止
             return True
@@ -660,11 +660,11 @@ class StageManager:
     def display_game_clear(self, screen):
         """ゲームクリアメッセージを表示"""
         black_overlay = pg.Surface((WIDTH, HEIGHT))
-        black_overlay.set_alpha(128) # 半透明設定
-        black_overlay.fill((0, 0, 0)) # 黒色
-        screen.blit(black_overlay, (0, 0)) # 背景を描画
+        black_overlay.set_alpha(128)  # 半透明設定
+        black_overlay.fill((0, 0, 0))  # 黒色
+        screen.blit(black_overlay, (0, 0))  # 背景を描画
 
-        font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80) # 日本語フォント
+        font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80)  # 日本語フォント
         text = font.render("ゲームクリア！", True, (255, 255, 0))
         rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
 
@@ -685,31 +685,31 @@ class StageManager:
         """
         # 半透明の赤背景
         red_overlay = pg.Surface((WIDTH, HEIGHT))
-        red_overlay.set_alpha(128) # 半透明設定
-        red_overlay.fill((255, 0, 0)) # 赤色
-        screen.blit(red_overlay, (0, 0)) # 背景描画
+        red_overlay.set_alpha(128)  # 半透明設定
+        red_overlay.fill((255, 0, 0))  # 赤色
+        screen.blit(red_overlay, (0, 0))  # 背景描画
 
         # テキスト表示
-        font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80) # 日本語フォント
+        font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 80)  # 日本語フォント
         text = font.render("ゲームオーバー！", True, (255, 255, 255)) # 白文字
         rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         screen.blit(text, rect)
 
         # 泣いているこうかとん画像を表示
-        img = pg.image.load("fig/8.png") # 泣いているこうかとん
+        img = pg.image.load("fig/8.png")  # 泣いているこうかとん
         img_rect = img.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 150))
         screen.blit(img, img_rect)
         # Bキーの説明
         sub_text = font.render("Bキーを押してタイトルへ", True, (255, 255, 255))
-        sub_rect = sub_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100)) # 文字間隔を調整
+        sub_rect = sub_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))  # 文字間隔を調整
         screen.blit(sub_text, sub_rect)
 
         pg.display.update()
 
         while True:
             for event in pg.event.get():
-                if event.type == pg.KEYDOWN and event.key == pg.K_b: # Bキーでタイトル画面に戻る
-                    screen.fill((0, 0, 0)) # 画面をクリア
+                if event.type == pg.KEYDOWN and event.key == pg.K_b:  # Bキーでタイトル画面に戻る
+                    screen.fill((0, 0, 0))  # 画面をクリア
                     return
 
     def display_stage(self, screen):
@@ -731,7 +731,7 @@ class StageManager:
             remaining_rect = remaining_text.get_rect(topright=(WIDTH - 100, 20))
 
             # 画像の表示位置
-            enemy_rect = enemy_image.get_rect(topright=(remaining_rect.left - 10, 20)) # テキストの左
+            enemy_rect = enemy_image.get_rect(topright=(remaining_rect.left - 10, 20))  # テキストの左
 
             # 画像とテキストの描画
             screen.blit(enemy_image, enemy_rect)
@@ -755,19 +755,19 @@ class StageManager:
 def wait_for_start(screen):
     start_screen = StartScreen(screen)
     while True:
-        start_screen.display() # タイトル画面を表示
+        start_screen.display()  # タイトル画面を表示
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return False
             if event.type == pg.KEYDOWN:
-                if event.key == pg.K_s: # Sキーでゲーム開始
+                if event.key == pg.K_s:  # Sキーでゲーム開始
                     return True
-                if event.key == pg.K_i: # Iキーで操作説明画面に切り替え
-                    screen.fill((0, 0, 0)) # 画面を黒で塗りつぶす
-                    show_instructions(screen) # 操作説明を表示
-                    screen.fill((0, 0, 0)) # 操作説明後に画面を再度黒で塗りつぶし
-                    start_screen.display() # タイトル画面を再表示
-                if event.key == pg.K_x: # Xキーでゲーム終了
+                if event.key == pg.K_i:  # Iキーで操作説明画面に切り替え
+                    screen.fill((0, 0, 0))  # 画面を黒で塗りつぶす
+                    show_instructions(screen)  # 操作説明を表示
+                    screen.fill((0, 0, 0))  # 操作説明後に画面を再度黒で塗りつぶし
+                    start_screen.display()  # タイトル画面を再表示
+                if event.key == pg.K_x:  # Xキーでゲーム終了
                     pg.quit()
                     sys.exit()
 
