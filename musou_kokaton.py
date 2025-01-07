@@ -509,11 +509,11 @@ class Boss(pg.sprite.Sprite):
         super().__init__()
         self.image = pg.transform.rotozoom(pg.image.load("fig/boss.png"), 0, 1.2)
         self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT // 4))
-        self.health = health # ボスの耐久値
-        self.speed = 2 # 移動速度
-        self.direction = 1 # 移動方向 (左右)
-        self.attack_interval = 30 # 攻撃間隔（フレーム数）※更に短くする
-        self.timer = 0 # 攻撃タイマー
+        self.health = health  # ボスの耐久値
+        self.speed = 2  # 移動速度
+        self.direction = 1  # 移動方向 (左右)
+        self.attack_interval = 30  # 攻撃間隔（フレーム数）※更に短くする
+        self.timer = 0  # 攻撃タイマー
 
     def update(self, bombs: pg.sprite.Group, bird: Bird):
         """
@@ -528,13 +528,13 @@ class Boss(pg.sprite.Sprite):
         self.timer += 1
         if self.timer >= self.attack_interval:
             self.shoot(bombs, bird)
-            self.timer = 0 # タイマーをリセット
+            self.timer = 0  # タイマーをリセット
 
     def shoot(self, bombs: pg.sprite.Group, bird: Bird):
         """
         Bossが多方向に高速爆弾を発射する
         """
-        angles = [-30, -15, 0, 15, 30] # 多方向に発射する角度
+        angles = [-30, -15, 0, 15, 30]  # 多方向に発射する角度
         for angle in angles:
             bombs.add(BossBomb(self.rect.center, bird, angle, speed=15)) # 更に速い速度
 
@@ -584,7 +584,7 @@ class StartScreen:
         self.exit_text = self.font.render("Xキーを押したら終了", True, (128, 0, 128)) # 紫文字
         self.exit_rect = self.exit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 200))
 
-        self.bg_img = pg.image.load("fig/6.png") # スタート画面の背景画像
+        self.bg_img = pg.image.load("fig/6.png")  # スタート画面の背景画像
 
     def display(self):
         """
@@ -603,10 +603,10 @@ class StageManager:
     ステージ進行を管理するクラス
     """
     def __init__(self, bird: Bird, score: Score):
-        self.stage = 1 # 現在のステージ
+        self.stage = 1  # 現在のステージ
         self.bird = bird
         self.score = score
-        self.enemy_kill_count = 0 # 倒した敵の数
+        self.enemy_kill_count = 0  # 倒した敵の数
         self.font = pg.font.Font(None, 50)
         self.neobeam_ready = False  # NeoBeamの使用可能状態
         self.neobeam_uses = 0  # NeoBeam使用可能数
