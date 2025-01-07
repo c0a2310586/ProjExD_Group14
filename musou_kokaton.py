@@ -42,7 +42,7 @@ def show_instructions(screen):
     font = pg.font.Font("C:/Windows/Fonts/msgothic.ttc", 50) # 日本語フォントを指定
     instructions = [
         "操作説明:",
-    "矢印キー: こうかとんを移動",
+    "WASDキー: こうかとんを移動",
     "左Shiftキー: 高速化",
     "左クリック: ビーム発射",
     "右クリック: 弾幕",
